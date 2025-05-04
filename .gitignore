@@ -1,0 +1,3 @@
+# Output folder: keep the folder but ignore contents
+output/*
+!output/.gitkeep
