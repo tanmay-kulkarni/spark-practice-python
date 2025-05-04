@@ -1,29 +1,45 @@
-# Spark Docker Justfile - Simplified Working Version
+# Spark Justfile for Multiple Scripts
 
 sparkImage := "bitnami/spark:latest"
-pythonFile := "spark-app.py"
 
 # Show available commands
 default:
     @echo "Available commands:"
-    @echo "  just run         - Run Spark locally (recommended method)"
-    @echo "  just clean       - Clean output directory"
+    @echo "  just list        - List available Spark scripts"
+    @echo "  just run SCRIPT  - Run a specific script (e.g., just run spark-app.py)"
+    @echo "  just clean       - Clean all output directories"
 
-# Clean outputs
+# List available scripts
+list:
+    @echo "Available Spark scripts:"
+    @find src -name "*.py" | sort
+
+# Run a specific Spark script
+run script:
+    @echo "Running {{script}}..."
+    @mkdir -p "output/{{script}}"
+    docker run --rm \
+        -v "$(pwd)/src:/app" \
+        -v "$(pwd)/output/{{script}}:/output" \
+        {{sparkImage}} \
+        spark-submit --master local[*] /app/{{script}}
+    @echo "✓ Job completed. Results in output/{{script}}/"
+
+# Clean all output directories
 clean:
-    @echo "Cleaning output directory..."
+    @echo "Cleaning output directories..."
     -rm -rf output/*
     @echo "✓ Cleaned"
 
-# Run Spark job locally (most reliable approach)
-run:
-    @echo "Running Spark job locally..."
-    mkdir -p output
-    chmod 777 output
-    docker run --rm \
-        -v "$(pwd)/src:/app" \
-        -v "$(pwd)/output:/output" \
-        {{sparkImage}} \
-        spark-submit --master local[*] /app/{{pythonFile}}
-    @echo "✓ Job completed. Results in the output directory."
-
+# Show contents of an output directory
+view script:
+    @if [ -d "output/{{script}}" ]; then \
+        echo "Contents of output/{{script}}:"; \
+        find "output/{{script}}" -name "*.csv" | while read file; do \
+            echo "\n--- $(basename "$file") ---"; \
+            head -10 "$file" | column -t -s,; \
+            echo "..."; \
+        done; \
+    else \
+        echo "No output found for {{script}}. Run 'just run {{script}}' first."; \
+    fi
