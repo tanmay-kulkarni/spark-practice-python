@@ -17,13 +17,15 @@ list:
 # Run a specific Spark script
 run script:
     @echo "Running {{script}}..."
-    @mkdir -p "output/{{script}}"
+    @basename="$(basename "{{script}}" .py)" && \
+    mkdir -p "output/$basename" && \
     docker run --rm \
         -v "$(pwd)/src:/app" \
-        -v "$(pwd)/output/{{script}}:/output" \
+        -v "$(pwd)/data:/data" \
+        -v "$(pwd)/output/$basename:/output" \
         {{sparkImage}} \
-        spark-submit --master local[*] /app/{{script}}
-    @echo "✓ Job completed. Results in output/{{script}}/"
+        spark-submit --master local[*] /app/{{script}} && \
+    echo "✓ Job completed. Results in output/$basename/"
 
 # Clean all output directories
 clean:
@@ -33,13 +35,14 @@ clean:
 
 # Show contents of an output directory
 view script:
-    @if [ -d "output/{{script}}" ]; then \
-        echo "Contents of output/{{script}}:"; \
-        find "output/{{script}}" -name "*.csv" | while read file; do \
+    @basename="$(basename "{{script}}" .py)" && \
+    if [ -d "output/$basename" ]; then \
+        echo "Contents of output/$basename:"; \
+        find "output/$basename" -name "*.csv" | while read file; do \
             echo "\n--- $(basename "$file") ---"; \
             head -10 "$file" | column -t -s,; \
             echo "..."; \
         done; \
     else \
-        echo "No output found for {{script}}. Run 'just run {{script}}' first."; \
+        echo "No output found for $basename. Run 'just run {{script}}' first."; \
     fi
